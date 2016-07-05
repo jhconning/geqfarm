@@ -128,14 +128,14 @@ class Economy(object):
         count = 1
         for p in sorted(params):    # print attributes alphabetically
             if (count % 4) == 0:
-                print("{0:<6} : {1}".format(p,params[p]))
+                print(("{0:<6} : {1}".format(p,params[p])))
             else:
-                print("{0:<6} : {1}".format(p,params[p])),
+                print(("{0:<6} : {1}".format(p,params[p])), end=' ')
             #print(count)
             count += 1
             
     def fooprint(self):
-        print(self.print_params())
+        print((self.print_params()))
 
 class MirEconomy(Economy):
     """ sub class of Economy class but with Mir as subeconomy
@@ -193,10 +193,7 @@ def scene_print(ECO, numS=5,prnt=True,detail=True):
             wr -- wr[theta] distorted competitive factor prices
         
         """
-        import sys
-        if not sys.version_info[0] ==2:
-            print('Use python 2.x for table formats')
-        print("Running {0} scenarios...".format(numS))                
+        print(("Running {0} scenarios...".format(numS)))                
         # competitive eqn when landlord is just part of the competitive fringe        
         comp = ECO.smallhold_eq([ECO.TBAR,ECO.LBAR],ECO.s)
         wc, Xc = comp.w, comp.X         
@@ -211,23 +208,23 @@ def scene_print(ECO, numS=5,prnt=True,detail=True):
             print("\nAssumed Parameters")
             print("==================")
             ECO.print_params()  
-            print('\nEffcient:[ Trc, Lrc]      [rc,wc]       w/r   '),
+            print(('\nEffcient:[ Trc, Lrc]      [rc,wc]       w/r   '), end=' ')
             if detail:
-                print('F( )    [r*Tr]  [w*Lr]'),
+                print(('F( )    [r*Tr]  [w*Lr]'), end=' ')
             print("")    
-            print("="*78)
-            print("        [{0:6.2f},{1:6.2f}] ".format(Xrc[0],Xrc[1])),
-            print("[{0:4.2f},{1:4.2f}]".format(wc[0],wc[1])),
-            print("  {0:4.2f} ".format(wc[1]/wc[0])),  
+            print(("="*78))
+            print(("        [{0:6.2f},{1:6.2f}] ".format(Xrc[0],Xrc[1])), end=' ')
+            print(("[{0:4.2f},{1:4.2f}]".format(wc[0],wc[1])), end=' ')
+            print(("  {0:4.2f} ".format(wc[1]/wc[0])), end=' ')  
             if detail:
-                print("| {0:5.2f} ".format(ECO.prodn(Xrc,ECO.s[-1]))),
-                print(" {0:5.2f} ".format(Xrc[0]*wc[0])),
-                print(" {0:6.2f} ".format(Xrc[1]*wc[1]))
+                print(("| {0:5.2f} ".format(ECO.prodn(Xrc,ECO.s[-1]))), end=' ')
+                print((" {0:5.2f} ".format(Xrc[0]*wc[0])), end=' ')
+                print((" {0:6.2f} ".format(Xrc[1]*wc[1])))
         
-            print("\nTheta  [ Tr, Lr ]      [rM,wM]        w/r  |"),
+            print(("\nTheta  [ Tr, Lr ]      [rM,wM]        w/r  |"), end=' ')
             print('F()   [T_hire]  [T_sale] [L_hire]')
             
-            print("="*78)
+            print(("="*78))
 
         Xr = np.zeros(shape=(numS+1,2))  # Xr - lord factor use for each theta
         wr = np.zeros(shape=(numS+1,2))            
@@ -237,18 +234,18 @@ def scene_print(ECO, numS=5,prnt=True,detail=True):
             wr[i] = cartelEQ.w
             guess = Xr[i]
             if prnt:            
-                print(" {0:3.2f}".format(theta[i])),
-                print(" [{0:6.2f},{1:6.2f}]".format(Xr[i,0],Xr[i,1])),
-                print("[{0:5.2g},{1:5.2f}] {2:5.2f}" \
-                .format(wr[i,0],wr[i,1],wr[i,1]/wr[i,0])),
+                print((" {0:3.2f}".format(theta[i])), end=' ')
+                print((" [{0:6.2f},{1:6.2f}]".format(Xr[i,0],Xr[i,1])), end=' ')
+                print(("[{0:5.2g},{1:5.2f}] {2:5.2f}" \
+                .format(wr[i,0],wr[i,1],wr[i,1]/wr[i,0])), end=' ')
                 if detail:
-                    print("| {0:5.2f} ".format(ECO.prodn(Xr[i],ECO.s[-1]))),      
-                    print(" {0:6.2f} ".format(Xr[i,0]*wr[i,0])),
-                    print(" {0:6.2f} ".format(theta[i]*ECO.TBAR*wr[i,0])),
-                    print(" {0:6.2f} ".format(Xr[i,1]*wr[i,1])),
+                    print(("| {0:5.2f} ".format(ECO.prodn(Xr[i],ECO.s[-1]))), end=' ')      
+                    print((" {0:6.2f} ".format(Xr[i,0]*wr[i,0])), end=' ')
+                    print((" {0:6.2f} ".format(theta[i]*ECO.TBAR*wr[i,0])), end=' ')
+                    print((" {0:6.2f} ".format(Xr[i,1]*wr[i,1])), end=' ')
                 print("")
         if prnt:
-            print("="*78)
+            print(("="*78))
             
         return (Xrc, Xr, wc, wr)
 

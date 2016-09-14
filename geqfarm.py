@@ -123,27 +123,10 @@ class Economy(object):
         return cartel_res
 
     def print_params(self):
-        """ print out parameters """
-        params = vars(self)
-        count = 1
-        for p in sorted(params):    # print attributes alphabetically
-            if (count % 4) == 0:
-                print(("{0:<6} : {1}".format(p,params[p])))
-            else:
-                print(("{0:<6} : {1}".format(p,params[p])), end=' ')
-            #print(count)
-            count += 1
-            
-    def fooprint(self):
-        print((self.print_params()))
-
-class MirEconomy(Economy):
-    """ sub class of Economy class but with Mir as subeconomy
-    """
-    def __init__(self, N):  # constructor to set initial parameters.
-        super(MirEconomy, self).__init__(N)  # inherit properties
-        # if None supplied use defaults
-
+        """ print out parameters alphabetically"""
+        params = sorted(vars(self).items())
+        for itm in params:
+            print(itm[0], '=', itm[1], end=', ')
 
 
 class CESEconomy(Economy):
@@ -178,11 +161,11 @@ class CESEconomy(Economy):
 # Note these print statements format correctly in python2.7 not 3.4
 def scene_print(ECO, numS=5,prnt=True,detail=True):
         """Creates numS land ownership (theta) scenarios
-        and returns competitive and market-power distorted equilibria  
+        and returns competitive and market-power distorted equilibria
         Prints results if flags are on.
-        
+
         Args:
-          ECO -- Instance of an Economy object 
+          ECO -- Instance of an Economy object
           numS -- number of values of theta
           prnt -- print table if True
         Returns:
@@ -191,62 +174,62 @@ def scene_print(ECO, numS=5,prnt=True,detail=True):
             Xr -- numS x 2 matrix, Xr[theta] = Landlords' distorted use
             wc -- competitive factor prices
             wr -- wr[theta] distorted competitive factor prices
-        
+
         """
-        print(("Running {0} scenarios...".format(numS)))                
-        # competitive eqn when landlord is just part of the competitive fringe        
+        print(("Running {0} scenarios...".format(numS)))
+        # competitive eqn when landlord is just part of the competitive fringe
         comp = ECO.smallhold_eq([ECO.TBAR,ECO.LBAR],ECO.s)
-        wc, Xc = comp.w, comp.X         
+        wc, Xc = comp.w, comp.X
         Xrc = Xc[:,-1]   # landlord's factor use
-        
+
         #
-        guess = Xrc    
+        guess = Xrc
         # distorted equilibria at different land ownership theta
         theta = np.linspace(0,1,numS+1)
         theta[-1] = 0.99
-        if prnt:        
+        if prnt:
             print("\nAssumed Parameters")
             print("==================")
-            ECO.print_params()  
+            ECO.print_params()
             print(('\nEffcient:[ Trc, Lrc]      [rc,wc]       w/r   '), end=' ')
             if detail:
                 print(('F( )    [r*Tr]  [w*Lr]'), end=' ')
-            print("")    
+            print("")
             print(("="*78))
             print(("        [{0:6.2f},{1:6.2f}] ".format(Xrc[0],Xrc[1])), end=' ')
             print(("[{0:4.2f},{1:4.2f}]".format(wc[0],wc[1])), end=' ')
-            print(("  {0:4.2f} ".format(wc[1]/wc[0])), end=' ')  
+            print(("  {0:4.2f} ".format(wc[1]/wc[0])), end=' ')
             if detail:
                 print(("| {0:5.2f} ".format(ECO.prodn(Xrc,ECO.s[-1]))), end=' ')
                 print((" {0:5.2f} ".format(Xrc[0]*wc[0])), end=' ')
                 print((" {0:6.2f} ".format(Xrc[1]*wc[1])))
-        
+
             print(("\nTheta  [ Tr, Lr ]      [rM,wM]        w/r  |"), end=' ')
             print('F()   [T_hire]  [T_sale] [L_hire]')
-            
+
             print(("="*78))
 
         Xr = np.zeros(shape=(numS+1,2))  # Xr - lord factor use for each theta
-        wr = np.zeros(shape=(numS+1,2))            
-        for i in range(numS+1):           
+        wr = np.zeros(shape=(numS+1,2))
+        for i in range(numS+1):
             cartelEQ = ECO.cartel_eq(theta[i], guess)
             Xr[i] = cartelEQ.X[:,-1]
             wr[i] = cartelEQ.w
             guess = Xr[i]
-            if prnt:            
+            if prnt:
                 print((" {0:3.2f}".format(theta[i])), end=' ')
                 print((" [{0:6.2f},{1:6.2f}]".format(Xr[i,0],Xr[i,1])), end=' ')
                 print(("[{0:5.2g},{1:5.2f}] {2:5.2f}" \
                 .format(wr[i,0],wr[i,1],wr[i,1]/wr[i,0])), end=' ')
                 if detail:
-                    print(("| {0:5.2f} ".format(ECO.prodn(Xr[i],ECO.s[-1]))), end=' ')      
+                    print(("| {0:5.2f} ".format(ECO.prodn(Xr[i],ECO.s[-1]))), end=' ')
                     print((" {0:6.2f} ".format(Xr[i,0]*wr[i,0])), end=' ')
                     print((" {0:6.2f} ".format(theta[i]*ECO.TBAR*wr[i,0])), end=' ')
                     print((" {0:6.2f} ".format(Xr[i,1]*wr[i,1])), end=' ')
                 print("")
         if prnt:
             print(("="*78))
-            
+
         return (Xrc, Xr, wc, wr)
 
 def factor_plot(ECO, Xrc, Xr):
@@ -262,7 +245,7 @@ def factor_plot(ECO, Xrc, Xr):
     plt.grid()
     plt.plot(theta, Tr_net, '-ro', label='distorted land')
     plt.plot(theta, Trc_net, label='efficient land')
-    plt.plot(theta, Lr_net, '-bx', label='distorted labor')
+    plt.plot(theta, Lr_net, '-b*', label='distorted labor')
     plt.plot(theta, Lrc_net, label='efficient labor')
     plt.grid()
     plt.ylim(-100, ECO.TBAR)
@@ -287,8 +270,6 @@ def TLratio_plot(ECO, Xrc, Xr):
     plt.show()
     return
 
-
-
 #
 if __name__ == "__main__":
     """Sample use of the Economy class """
@@ -300,10 +281,10 @@ if __name__ == "__main__":
     E.GAMMA = 0.90
 
     E.smallhold_eq([E.TBAR, E.LBAR], s, analytic=True)
-    
+
     (Xrc, Xr, wc, wr) = scene_print(E, 10, detail=True)
-    
-    #factor_plot(E,Xrc,Xr)
+
+    factor_plot(E,Xrc,Xr)
     TLratio_plot(E,Xrc,Xr)
 
 #    scene_plot(E, Xrc, Xr)

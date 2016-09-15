@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
-# farmeconomy.py   module
-# authors: Jonathan Conning & Aleks Michuda
-# An OOP implementation
+""" geqfarm.py   General Equilibrium Farm Size Distribution
+An Economy Class and methods for calculating and representing General
+equilibrium models of the farm size distribution with and without factor
+market distortions.
+
+Authors: Jonathan Conning & Aleks Michuda
+"""
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -82,7 +86,10 @@ class Economy(object):
             WR = self.marginal_product(Xs[:, -2], s[-2])
         else:  # Numeric solution should work for any demands
             w0 = np.array([0.5, 0.5])
-            f = lambda w: np.sum(self.excessD(w, Xbar, s)**2)
+
+            def f(w):
+                return np.sum(self.excessD(w, Xbar, s)**2)
+
             res = minimize(f, w0, method='Nelder-Mead')
             WR = res.x
         Xs = self.demands(WR, s)
@@ -95,7 +102,7 @@ class Economy(object):
 
         when cartel uses (tr,lr) fringe has (TBAR-tr,LBAR-lr)  """
         # at present cartel is always last index farm
-        s_fringe, s_R = self.s[0:-1], self.s[-1]  # landlord is top index farmer
+        s_fringe, s_R = self.s[0:-1], self.s[-1]  # landlord is last farmer
         TB_fringe = max(self.TBAR - Xr[0], 0)
         LB_fringe = max(self.LBAR - Xr[1], 0)
         fringe = self.smallhold_eq([TB_fringe, LB_fringe], s_fringe)
@@ -110,7 +117,8 @@ class Economy(object):
         """ Cartel chooses own factor use (and by extension how much to
         withold from the fring to max profits plus net factor sales)
         """
-        f = lambda X: -self.cartel_income(X, theta)
+        def f(X):
+            return -self.cartel_income(X, theta)
         res = minimize(f, guess, method='Nelder-Mead')
         XR = res.x
         # print('XR:',XR)
@@ -154,11 +162,8 @@ class CESEconomy(Economy):
         MPL = common * (1-self.PHI)*X[1]**(-self.RHO-1)
         return np.append(MPT, MPL)
 
+# End of class definitions
 
-#########################
-# We also define some utility functions
-
-# Note these print statements format correctly in python2.7 not 3.4
 def scene_print(ECO, numS=5,prnt=True,detail=True):
         """Creates numS land ownership (theta) scenarios
         and returns competitive and market-power distorted equilibria
@@ -197,7 +202,7 @@ def scene_print(ECO, numS=5,prnt=True,detail=True):
             print("")
             print(("="*78))
             print(("        [{0:6.2f},{1:6.2f}] ".format(Xrc[0],Xrc[1])), end=' ')
-            print(("[{0:4.2f},{1:4.2f}]".format(wc[0],wc[1])), end=' ')
+            print(("[{0:4.2f},{1:4.2f}]".format(wc[0], wc[1])), end=' ')
             print(("  {0:4.2f} ".format(wc[1]/wc[0])), end=' ')
             if detail:
                 print(("| {0:5.2f} ".format(ECO.prodn(Xrc,ECO.s[-1]))), end=' ')
@@ -209,7 +214,7 @@ def scene_print(ECO, numS=5,prnt=True,detail=True):
 
             print(("="*78))
 
-        Xr = np.zeros(shape=(numS+1,2))  # Xr - lord factor use for each theta
+        Xr = np.zeros(shape=(numS+1, 2))  # Xr - lord factor use for each theta
         wr = np.zeros(shape=(numS+1,2))
         for i in range(numS+1):
             cartelEQ = ECO.cartel_eq(theta[i], guess)
@@ -231,6 +236,7 @@ def scene_print(ECO, numS=5,prnt=True,detail=True):
             print(("="*78))
 
         return (Xrc, Xr, wc, wr)
+
 
 def factor_plot(ECO, Xrc, Xr):
     plt.rcParams["figure.figsize"] = (10, 8)
@@ -286,26 +292,3 @@ if __name__ == "__main__":
 
     factor_plot(E,Xrc,Xr)
     TLratio_plot(E,Xrc,Xr)
-
-#    scene_plot(E, Xrc, Xr)
-#    plt.show()
-##
-#    print("Competitive Fringe cases EE(C) and DE cases")
-#    DE = Economy(5)
-#    DE.smallhold_eq([E.TBAR, E.LBAR], s, analytic=True)
-#    (Xrc, Xr, wc, wr) = scenarios(DE, 10, detail=True)
-#    scene_plot(E, Xrc, Xr)
-#
-#    print("MIR Fringe cases DD")
-#    DD = MirEconomy(5)
-#    print(DD.prodn(np.array([10, 10]), np.array([1, 1.05])))
-#    DD.smallhold_eq([E.TBAR, E.LBAR], s, analytic=True)
-#    (Xrc, Xr, wc, wr) = scenarios(DD, 10, detail=True)
-#    scene_plot(E, Xrc, Xr)
-##
-##    print("TESTING CES")
-##    CE = CESEconomy(5)
-##    print CE.prodn(np.array([10, 10]), np.array([1, 1.05]))
-##    CE.smallhold_eq([E.TBAR, E.LBAR], s, analytic=True)
-##    (Xrc, Xr, wc, wr) = scenarios(CE, 10, detail=True)
-##    scene_plot(E, Xrc, Xr)

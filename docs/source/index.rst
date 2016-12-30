@@ -12,6 +12,7 @@ Read More
     :maxdepth: 2
     :caption: Contents:
 
+    codedoc
     HowToSphinx
 
 

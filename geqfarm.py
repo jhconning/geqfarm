@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 """ geqfarm.py   General Equilibrium Farm Size Distribution
+
+Author: Jonathan Conning
+
 An Economy Class and methods for calculating and representing General
 equilibrium models of the farm size distribution with and without factor
 market distortions.
@@ -15,14 +18,34 @@ from collections import namedtuple
 
 class Economy(object):
 
-    """ Economy with an Equilibrium Farm Size Distribution
+    """  Economy with an Equilibrium Farm Size Distribution
+
     Args:
          N (int): number of farm-size classes or bins in the distribution
 
-    Note: We take the landlord class to be last [-1] indexed group.
-    By default the initial distribution of skills is uniformly distributed.
-    For example N = 5 and s = np.array([1, 1, 1, 1, 1.5]) has 5 farmer groups.
-    But any distribution can be used.
+    Examples:
+        To solve for a competitive equilibrium with 5 farmer classes each with one
+        unit of skill.
+
+        >>> E = Economy(5)
+        >>> E.smallhold_eq([100,100],E.s)
+        result(w=array([ 0.21971211,  0.21971211]),
+        X=array([[ 20.,  20.,  20.,  20.,  20.], [ 20.,  20.,  20.,  20.,  20.]]))
+
+        To solve for the market-power distorted equilibrium with THETA = 0.8
+
+        >>> E.cartel_eq(0.85)
+        result(w=array([ 0.2734677,  0.1954175]),
+        X=array([[ 13.11157595,  13.11157595,  13.11157595,  13.11157595, 47.55369619],
+        [ 18.34836944,  18.34836944,  18.34836944,  18.34836944, 26.60652225]]))
+
+
+    Note:
+        We take the landlord class to be last [-1] indexed group.
+        By default the initial distribution of skills is uniformly distributed.
+        For example N = 5 and s = np.array([1, 1, 1, 1, 1.5]) has 5 farmer groups.
+        But any distribution can be used.
+
     """
 
     def __init__(self, N):  # constructor to set initial default parameters.
@@ -39,7 +62,8 @@ class Economy(object):
         return 'Economy(N={}, GAM={}, TBAR={}, LBAR={})'.format(self.N, self.GAMMA, self.TBAR, self.LBAR)
 
     def prodn(self, X, s):
-        """ Production function
+        """
+        Production function
         Args:
             X:  vector of factor inputs (X[0] land and X[1] labor)
             s:  vector of skill endowments by xtile
@@ -49,7 +73,8 @@ class Economy(object):
         return Y
 
     def marginal_product(self, X, s):
-        """ Production function technoogy
+        """
+        Factor marginal products
         Args:
             X:  vector of factor inputs (X[0] land and X[1] labor)
             s:  vector of skill endowments by xtile
@@ -60,16 +85,27 @@ class Economy(object):
         return np.append(MPT, MPL)
 
     def profits(self, X, s, w):
-        """ profits given factor prices and (T, L, s)"""
+        """
+        profits given factor prices and (T, L, s)
+        Args:
+            X: vector of factor inputs (X[0] land and X[1] labor)
+            s: vector of skill endowments by xtile
+            w: vector of factor prices
+        Returns:
+            float: vector of marginal products
+        """
         return self.prodn(X, s) - np.dot(w, X) - self.H
 
     def demands(self, w, s):
-        """Competitive factor demands for each skill group in a subeconomy
+        """
+        Competitive factor demands for each skill group in a subeconomy
         Args:
             w:  vector of factor prices (w[0] land rent and w[1] wage)
             s:  vector of skill endowments by xtile
-        Note:  Farms with negative profits assumed to shut down with zero demands.
-        Returns:  vector of factor demands
+        Note:
+            Farms with negative profits assumed to shut down with zero demands.
+        Returns:
+            vector of factor demands
         """
         alpha, gamma = self.ALPHA, self.GAMMA
         land = ((w[1]/(gamma*s*(1-alpha))) *
@@ -84,7 +120,8 @@ class Economy(object):
         return X*profitable
 
     def excessD(self, w, Xbar, s):
-        """ Total excess land and labor demand given factor prices in
+        """
+        Total excess land and labor demand given factor prices in
         subeconomy with Xbar supplies
         returns excess demand in each market
         """
@@ -93,7 +130,8 @@ class Economy(object):
         return res
 
     def smallhold_eq(self, Xbar, s, analytic=True):
-        """ Solves for market clearing factor prices in economy with Xbar supplies.
+        """
+        Solves for market clearing factor prices in economy with Xbar supplies.
 
         Solve analytically or numerically (minimizes sum of squared excess demands)
         Args:
@@ -128,9 +166,11 @@ class Economy(object):
         return res
 
     def cartel_income(self, Xr, theta):
-        """ Cartel group's income from profits and factor income
+        """
+        Cartel group's income from profits and factor income
 
-        when cartel uses (tr,lr) fringe has (TBAR-tr,LBAR-lr)  """
+        when cartel uses (tr,lr) fringe has (TBAR-tr,LBAR-lr)
+        """
         # at present cartel is always last index farm
         s_fringe, s_R = self.s[0:-1], self.s[-1]  # landlord is last farmer
         TB_fringe = max(self.TBAR - Xr[0], 0)
@@ -144,7 +184,8 @@ class Economy(object):
         return y
 
     def cartel_eq(self, theta, guess=[1, 1]):
-        """ Cartel chooses own factor use (and by extension how much to
+        """
+        Cartel chooses own factor use (and by extension how much to
         withold from the fring to max profits plus net factor sales)
         """
         def f(X):
@@ -161,15 +202,20 @@ class Economy(object):
         return cartel_res
 
     def print_params(self):
-        """ print out parameters alphabetically"""
+        """
+        Display parameters alphabetically
+        """
         params = sorted(vars(self).items())
         for itm in params:
             print(itm[0], '=', itm[1], end=', ')
 
 
 class CESEconomy(Economy):
-    """ sub class of Economy class but with two factor CES
+
     """
+    sub class of Economy class but with two factor CES
+    """
+
     def __init__(self, N):  # constructor to set initial parameters.
         super(CESEconomy, self).__init__(N)  # inherit properties
         # if None supplied use defaults
@@ -198,7 +244,8 @@ class CESEconomy(Economy):
 # End of class definitions
 
 def scene_print(ECO, numS=5,prnt=True,detail=True):
-        """Creates numS land ownership scenarios by varying land gini THETA
+        """
+        Creates numS land ownership scenarios by varying land gini THETA
         calculating competitive and market-power distorted equilibria for each
         Prints results if flags are on.
 

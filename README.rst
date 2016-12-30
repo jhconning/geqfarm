@@ -1,9 +1,12 @@
-Modeling-Farm-Size-Distribution
-==================================
 
-Python files for a general equilibrium model of agricultural economy with market power distortions
 
-by Jonathan Conning (building on work with Aleks Michuda)
+Modeling  Farm-Size Distributions
+==================================================
+
+This is a repository of python files and documentation for a project to build general equilibrium models of
+agricultural economies with and without factor market power and other distortions.
+
+by Jonathan Conning (with Aleks Michuda)
 
 Python code for variants of general equilibrium models of the farm size distribution.
 Basic stuff ported from earlier Mathcad and Matlab files (some of it work with Aleks Michuda).

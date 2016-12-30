@@ -1,25 +1,18 @@
-.. geqfarm documentation master file, created by
-   sphinx-quickstart on Thu Dec 22 17:37:09 2016.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+..  geqfarm documentation master file, created by
+    sphinx-quickstart on Thu Dec 22 17:37:09 2016.
+    You can adapt this file completely to your liking, but it should at least
+    contain the root `toctree` directive.
 
-===============================================================
-geqfarm -- General Equilibrium Farm Size Distribution Models
-===============================================================
+.. include:: ../../README.rst
 
-The `geqfarm` python library includes methods for defining and solving
-static general equilibrium models of farm size distributions.
+Read More
+---------
 
-This is work in progress.
+..  toctree::
+    :maxdepth: 2
+    :caption: Contents:
 
-
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-
-   HowToSphinx
-
+    HowToSphinx
 
 
 Indices and tables

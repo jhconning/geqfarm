@@ -57,6 +57,8 @@ class Economy(object):
         self.LBAR    = 100    # Total Labor Endowment
         self.H       = 0.0    # fixed cost of production
         self.s       = np.ones(N)
+        self.Lucas   = False
+        self.analytic= False  #solve CD analytically if true
 
     def __repr__(self):
         return 'Economy(N={}, GAM={}, TBAR={}, LBAR={})'.format(self.N, self.GAMMA, self.TBAR, self.LBAR)
@@ -69,67 +71,82 @@ class Economy(object):
             s:  vector of skill endowments by xtile
         Returns:  vector of output(s)
         """
-        Y = s*((X[0]**self.ALPHA)*(X[1]**(1-self.ALPHA)))**self.GAMMA
+        T, L = X
+        Y = s*((T**self.ALPHA)*(L**(1-self.ALPHA)))**self.GAMMA
         return Y
 
     def marginal_product(self, X, s):
         """
-        Factor marginal products
+        Factor marginal products fo Cobb-Douglas
         Args:
             X:  vector of factor inputs (X[0] land and X[1] labor)
             s:  vector of skill endowments by xtile
         Returns:  vector of marginal products
         """
-        MPT = self.ALPHA*self.GAMMA*self.prodn(X,  s)/X[0]
-        MPL = (1-self.ALPHA)*self.GAMMA*self.prodn(X, s)/X[1]
+        T, L = X
+        MPT = self.ALPHA*self.GAMMA*self.prodn(X,  s)/T
+        MPL = (1-self.ALPHA)*self.GAMMA*self.prodn(X, s)/L
         return np.append(MPT, MPL)
 
-    def profits(self, X, s, w):
+    def profits(self, X, s, rw):
         """
         profits given factor prices and (T, L, s)
         Args:
             X: vector of factor inputs (X[0] land and X[1] labor)
             s: vector of skill endowments by xtile
-            w: vector of factor prices
+            rw: vector of factor prices
         Returns:
             float: vector of marginal products
         """
-        return self.prodn(X, s) - np.dot(w, X) - self.H
+        return self.prodn(X, s) - np.dot(rw, X) - self.H
 
-    def demands(self, w, s):
+    def demands(self, rw, s):
         """
         Competitive factor demands for each skill group in a subeconomy
         Args:
-            w:  vector of factor prices (w[0] land rent and w[1] wage)
+            rw:  vector of factor prices (w[0] land rent and w[1] wage)
             s:  vector of skill endowments by xtile
         Note:
             Farms with negative profits assumed to shut down with zero demands.
         Returns:
-            vector of factor demands
+            object: 
+            vector of factor demands, indicator function if operate production
         """
-        alpha, gamma = self.ALPHA, self.GAMMA
-        land = ((w[1]/(gamma*s*(1-alpha))) *
-                (((1-alpha)/alpha)*(w[0]/w[1])) **
-                (1-gamma*(1-alpha)))**(1/(gamma-1))
-        labor = ((w[0]/(gamma*s*alpha)) *
-                 ((alpha/(1-alpha))*(w[1]/w[0])) **
-                 (1-gamma*alpha))**(1/(gamma-1))
+        a, g = self.ALPHA, self.GAMMA
+        r, w = rw
+        land = ((w/(g * s * (1 - a))) *
+                (((1-a)/a) * (r/w)) **
+                (1 - g*(1 - a))) ** (1/(g - 1))
+
+        labor = ((r/(g * s * a)) *
+                 ((a/(1-a)) * (w/r)) **
+                 (1 - g*a)) ** (1/(g - 1))
         # if fixed cost implies negative profits, zero demands
         X = np.array([land, labor])
-        profitable = (self.profits(X, s, w) > 0)
-        return X*profitable
+        if self.Lucas:
+            operate = (self.profits(X, s, rw) > w)    # For Lucas
+        else:
+            operate = (self.profits(X, s, rw) > 0)    # relevant if fixed costs
+        return X*operate
 
-    def excessD(self, w, Xbar, s):
+    def excessD(self, rw, Xbar, s):
         """
         Total excess land and labor demand given factor prices in
         subeconomy with Xbar supplies
         returns excess demand in each market
         """
-        res = np.array(([np.sum(self.demands(w, s)[0])-Xbar[0],
-                         np.sum(self.demands(w, s)[1])-Xbar[1]]))
+        XD = self.demands(rw, s)
+        TE, LE = Xbar
+        if self.Lucas:   #In Lucas model operators cannot supply labor.
+            workers = (self.N - np.count_nonzero(XD[1]>0))*(self.LBAR/self.N)
+        else:
+            workers = LE
+
+        res = np.array([np.sum(XD[0]) - TE,
+                        np.sum(XD[1]) - workers])
         return res
 
-    def smallhold_eq(self, Xbar, s, analytic=True):
+    def smallhold_eq(self, Xbar, s):
         """
         Solves for market clearing factor prices in economy with Xbar supplies.
 
@@ -142,7 +159,7 @@ class Economy(object):
             res (named tuple): factor prices and demands res.w, res.X
         """
 
-        if analytic:     # for specific CobbDouglas
+        if self.analytic:     # for specific CobbDouglas
             gamma = self.GAMMA
             s_fringe, s_R = s[0:-1], s[-1]
             psi = np.sum((s_fringe/s_R)**(1/(1-gamma)))
@@ -153,7 +170,7 @@ class Economy(object):
             Xs = np.array([np.append(T_fringe, Tr), np.append(L_fringe, Lr)])
             WR = self.marginal_product(Xs[:, -1], s[-1])
         else:  # Numeric solution should work for any demands
-            w0 = np.array([0.5, 0.5])
+            w0 = np.array([0.2, 0.2])
 
             def f(w):
                 return np.sum(self.excessD(w, Xbar, s)**2)
@@ -205,9 +222,14 @@ class Economy(object):
         """
         Display parameters alphabetically
         """
-        params = sorted(vars(self).items())
+        params = vars(self).items()
         for itm in params:
-            print(itm[0], '=', itm[1], end=', ')
+            if type(itm[1]) is np.ndarray:
+                print()
+                print(itm[0], '(tail)=', itm[1][-6:], end=', ')
+                print()
+            else:
+                print(itm[0], '=', itm[1], end=', ')
 
 
 class CESEconomy(Economy):
@@ -243,7 +265,7 @@ class CESEconomy(Economy):
 
 # End of class definitions
 
-def scene_print(ECO, numS=5,prnt=True,detail=True):
+def scene_print(E, numS=5, prnt=True, detail=True):
         """
         Creates numS land ownership scenarios by varying land gini THETA
         calculating competitive and market-power distorted equilibria for each
@@ -256,17 +278,16 @@ def scene_print(ECO, numS=5,prnt=True,detail=True):
         Returns:
           [Xc,Xr,wc,wr]  where
             Xc -- Efficient/Competitive landlord factor use
+            Xc -- Efficient/Competitive landlord factor use
             Xr -- numS x 2 matrix, Xr[theta] = Landlords' distorted use
             wc -- competitive factor prices
             wr -- wr[theta] distorted competitive factor prices
 
         """
-        print(("Running {0} scenarios...".format(numS)))
         # competitive eqn when landlord is just part of the competitive fringe
-        comp = ECO.smallhold_eq([ECO.TBAR,ECO.LBAR],ECO.s)
-        wc, Xc = comp.w, comp.X
+        comp = E.smallhold_eq([E.TBAR, E.LBAR], E.s)
+        (rc,wc), Xc = comp.w, comp.X
         Xrc = Xc[:,-1]   # landlord's factor use
-
         #
         guess = Xrc
         # distorted equilibria at different land ownership theta
@@ -275,19 +296,20 @@ def scene_print(ECO, numS=5,prnt=True,detail=True):
         if prnt:
             print("\nAssumed Parameters")
             print("==================")
-            ECO.print_params()
-            print(('\nEffcient:[ Trc, Lrc]      [rc,wc]       w/r   '), end=' ')
+            E.print_params()
+            print()
+            print(('\nEffcient:[ Trc, Lrc]      [rc, wc]      w/r   '), end=' ')
             if detail:
                 print(('F( )    [r*Tr]  [w*Lr]'), end=' ')
             print("")
             print(("="*78))
             print(("        [{0:6.2f},{1:6.2f}] ".format(Xrc[0],Xrc[1])), end=' ')
-            print(("[{0:4.2f},{1:4.2f}]".format(wc[0], wc[1])), end=' ')
-            print(("  {0:4.2f} ".format(wc[1]/wc[0])), end=' ')
+            print(("[{0:4.2f},{1:4.2f}]".format(rc, wc)), end=' ')
+            print(("  {0:4.2f} ".format(wc/rc)), end=' ')
             if detail:
-                print(("| {0:5.2f} ".format(ECO.prodn(Xrc,ECO.s[-1]))), end=' ')
-                print((" {0:5.2f} ".format(Xrc[0]*wc[0])), end=' ')
-                print((" {0:6.2f} ".format(Xrc[1]*wc[1])))
+                print(("| {0:5.2f} ".format(E.prodn(Xrc, E.s[-1]))), end=' ')
+                print((" {0:5.2f} ".format(Xrc[0]*rc)), end=' ')
+                print((" {0:6.2f} ".format(Xrc[1]*wc)))
 
             print(("\nTheta  [ Tr, Lr ]      [rM,wM]        w/r  |"), end=' ')
             print('F()   [T_hire]  [T_sale] [L_hire]')
@@ -300,7 +322,7 @@ def scene_print(ECO, numS=5,prnt=True,detail=True):
         w, r = np.zeros(numS + 1), np.zeros(numS + 1)
 
         for i in range(numS+1):
-            cartelEQ = ECO.cartel_eq(theta[i], guess)
+            cartelEQ = E.cartel_eq(theta[i], guess)
             Xr[i] = cartelEQ.X[:, -1]
             Tr[i], Lr[i] = Xr[i]
             rw[i] = cartelEQ.w
@@ -312,15 +334,15 @@ def scene_print(ECO, numS=5,prnt=True,detail=True):
                 print(("[{0:5.2g},{1:5.2f}] {2:5.2f}" \
                 .format(r[i],w[i],w[i]/r[i])), end=' ')
                 if detail:
-                    print(("| {0:5.2f} ".format(ECO.prodn(Xr[i],ECO.s[-1]))), end=' ')
+                    print(("| {0:5.2f} ".format(E.prodn(Xr[i], E.s[-1]))), end=' ')
                     print((" {0:6.2f} ".format(Xr[i,0]*rw[i,0])), end=' ')
-                    print((" {0:6.2f} ".format(theta[i]*ECO.TBAR*rw[i,0])), end=' ')
+                    print((" {0:6.2f} ".format(theta[i] * E.TBAR * rw[i, 0])), end=' ')
                     print((" {0:6.2f} ".format(Xr[i,1]*rw[i,1])), end=' ')
                 print("")
         if prnt:
             print(("="*78))
 
-        return (Xrc, Xr, wc, rw)
+        return (Xrc, Xr, [rc,wc], rw)
 
 
 def factor_plot(ECO, Xrc, Xr):
@@ -371,7 +393,7 @@ if __name__ == "__main__":
     E.ALPHA = 0.5
     E.GAMMA = 0.90
 
-    E.smallhold_eq([E.TBAR, E.LBAR], s, analytic=True)
+    E.smallhold_eq([E.TBAR, E.LBAR], s)
 
     (Xrc, Xr, wc, wr) = scene_print(E, 10, detail=True)
 

@@ -124,9 +124,9 @@ class Economy(object):
         # if fixed cost implies negative profits, zero demands
         X = np.array([land, labor])
         if self.Lucas:
-            operate = (self.profits(X, s, rw) > w)    # For Lucas
+            operate = (self.profits(X, s, rw) >= w)    # For Lucas
         else:
-            operate = (self.profits(X, s, rw) > 0)    # relevant if fixed costs
+            operate = (self.profits(X, s, rw) >= 0)    # relevant if fixed costs
         return X*operate
 
     def excessD(self, rw, Xbar, s):
@@ -138,7 +138,7 @@ class Economy(object):
         XD = self.demands(rw, s)
         TE, LE = Xbar
         if self.Lucas:   #In Lucas model operators cannot supply labor.
-            workers = (self.N - np.count_nonzero(XD[1]>0))*(self.LBAR/self.N)
+            workers = (self.N - np.count_nonzero(XD[1]>0))*(LE/self.N)
         else:
             workers = LE
 
@@ -170,7 +170,7 @@ class Economy(object):
             Xs = np.array([np.append(T_fringe, Tr), np.append(L_fringe, Lr)])
             WR = self.marginal_product(Xs[:, -1], s[-1])
         else:  # Numeric solution should work for any demands
-            w0 = np.array([0.2, 0.2])
+            w0 = np.array([0.2, 0.2])  #rw guess
 
             def f(w):
                 return np.sum(self.excessD(w, Xbar, s)**2)
@@ -189,18 +189,19 @@ class Economy(object):
         when cartel uses (tr,lr) fringe has (TBAR-tr,LBAR-lr)
         """
         # at present cartel is always last index farm
+        Tr, Lr = Xr
         s_fringe, s_R = self.s[0:-1], self.s[-1]  # landlord is last farmer
-        TB_fringe = max(self.TBAR - Xr[0], 0)
-        LB_fringe = max(self.LBAR - Xr[1], 0)
+        TB_fringe =  self.TBAR - Tr
+        LB_fringe = self.LBAR - Lr
         fringe = self.smallhold_eq([TB_fringe, LB_fringe], s_fringe)
         y = self.prodn(Xr, s_R) - \
-            np.dot(fringe.w, [Xr[0]-self.TBAR*theta,
-                              Xr[1]-self.LAMBDA*self.LBAR])
+            np.dot(fringe.w, [Tr-self.TBAR*theta,
+                              Lr-self.LAMBDA*self.LBAR])
         # print("cartel:  Tr={0:8.3f}, Lr={1:8.3f}, y={2:8.3f}".format(Xr[0],
         # Xr[1],y))
         return y
 
-    def cartel_eq(self, theta, guess=[1, 1]):
+    def cartel_eq(self, theta, guess=[20, 20]):
         """
         Cartel chooses own factor use (and by extension how much to
         withold from the fring to max profits plus net factor sales)

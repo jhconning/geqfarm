@@ -3,6 +3,8 @@
 
 Author: Jonathan Conning
 
+New $ S^(1-\gamma)  ()^\gamma $ 
+
 An Economy Class and methods for calculating and representing General
 equilibrium models of the farm size distribution with and without factor
 market distortions.
@@ -18,19 +20,20 @@ from collections import namedtuple
 
 class Economy(object):
 
-    """  Economy with an Equilibrium Farm Size Distribution
+    """  Farm Economy with an Equilibrium Farm Size Distribution
 
     Args:
          N (int): number of farm-size classes or bins in the distribution
 
     Examples:
-        To solve for a competitive equilibrium with 5 farmer classes each with one
-        unit of skill.
+        To solve for a competitive equilibrium with 5 farmer classes each with
+        one unit of skill.
 
         >>> E = Economy(5)
         >>> E.smallhold_eq([100,100],E.s)
         result(w=array([ 0.21971211,  0.21971211]),
-        X=array([[ 20.,  20.,  20.,  20.,  20.], [ 20.,  20.,  20.,  20.,  20.]]))
+        X=array([[ 20.,  20.,  20.,  20.,  20.], 
+                [ 20.,  20.,  20.,  20.,  20.]]))
 
         To solve for the market-power distorted equilibrium with THETA = 0.8
 
@@ -43,13 +46,13 @@ class Economy(object):
     Note:
         We take the landlord class to be last [-1] indexed group.
         By default the initial distribution of skills is uniformly distributed.
-        For example N = 5 and s = np.array([1, 1, 1, 1, 1.5]) has 5 farmer groups.
-        But any distribution can be used.
+        For example N = 5 and s = np.array([1, 1, 1, 1, 1.5]) has 5 farmer 
+        groups. But any distribution can be used.
 
     """
 
     def __init__(self, N):  # constructor to set initial default parameters.
-        self.N       = N   # of xtiles (number of skill groups)
+        self.N       = N   # number of skill groups
         self.GAMMA   = 0.8    # homogeneity factor
         self.ALPHA   = 0.5    # alpha (land) for production function
         self.LAMBDA  = 1.0/N  # landlord share of labor
@@ -61,7 +64,8 @@ class Economy(object):
         self.analytic= False  #solve CD analytically if true
 
     def __repr__(self):
-        return 'Economy(N={}, GAM={}, TBAR={}, LBAR={})'.format(self.N, self.GAMMA, self.TBAR, self.LBAR)
+        return 'Economy(N={}, GAM={}, TBAR={}, LBAR={}, \n E.s[-5:]={} )'\
+            .format(self.N, self.GAMMA, self.TBAR, self.LBAR, self.s[-5:])
 
     def prodn(self, X, s):
         """
@@ -72,7 +76,7 @@ class Economy(object):
         Returns:  vector of output(s)
         """
         T, L = X
-        Y = s*((T**self.ALPHA)*(L**(1-self.ALPHA)))**self.GAMMA
+        Y = s**(1-self.GAMMA)*((T**self.ALPHA)*(L**(1-self.ALPHA)))**self.GAMMA
         return Y
 
     def marginal_product(self, X, s):
@@ -148,36 +152,23 @@ class Economy(object):
 
     def smallhold_eq(self, Xbar, s):
         """
-        Solves for market clearing factor prices in economy with Xbar supplies.
+        Solves for market clearing factor prices in sub-economy with Xbar supplies.
 
-        Solve analytically or numerically (minimizes sum of squared excess demands)
+        Solve analytically. Marginal products off any one inside
         Args:
             X:  vector of factor inputs (X[0] land and X[1] labor)
-            s:  vector of skill endowments by xtile
-            analytic (bool): by default solve analytically
+            s:  vector of skill endowments in the subeconomy
+
         Returns:
             res (named tuple): factor prices and demands res.w, res.X
         """
 
-        if self.analytic:     # for specific CobbDouglas
-            gamma = self.GAMMA
-            s_fringe, s_R = s[0:-1], s[-1]
-            psi = np.sum((s_fringe/s_R)**(1/(1-gamma)))
-            Lr = Xbar[1]/(1+psi)
-            Tr = Xbar[0]/(1+psi)
-            L_fringe = Lr*(s_fringe/s_R)**(1/(1-gamma))
-            T_fringe = Tr*(s_fringe/s_R)**(1/(1-gamma))
-            Xs = np.array([np.append(T_fringe, Tr), np.append(L_fringe, Lr)])
-            WR = self.marginal_product(Xs[:, -1], s[-1])
-        else:  # Numeric solution should work for any demands
-            w0 = np.array([0.2, 0.2])  #rw guess
+        S = np.sum(s)
+        Li = (s/S)*Xbar[1]
+        Ti = (s/S)*Xbar[0]
+        Xs = np.array([Ti, Li])
+        WR = self.marginal_product(Xbar, S)
 
-            def f(w):
-                return np.sum(self.excessD(w, Xbar, s)**2)
-
-            res = minimize(f, w0, method='Nelder-Mead')
-            WR = res.x
-        Xs = self.demands(WR, s)
         result = namedtuple('result', ['w', 'X'])
         res = result(w=WR, X=Xs)
         return res
@@ -203,11 +194,12 @@ class Economy(object):
 
     def cartel_eq(self, theta, guess=[20, 20]):
         """
-        Cartel chooses own factor use (and by extension how much to
-        withold from the fring to max profits plus net factor sales)
+        Cartel chooses own factor use XR, and by extension how much to
+        withold (Xbar-XR) from the fringe to maximize profits plus net factor sales
         """
         def f(X):
             return -self.cartel_income(X, theta)
+
         res = minimize(f, guess, method='Nelder-Mead')
         XR = res.x
         # print('XR:',XR)
@@ -357,6 +349,7 @@ def factor_plot(ECO, Xrc, Xr):
     Trc_net = Xrc[0]*np.ones(numS+1)-np.array(theta)*ECO.TBAR
     Lrc_net = Xrc[1]*np.ones(numS+1)-ECO.LAMBDA*ECO.LBAR
     plt.grid()
+    plt.axhline(0, linestyle='dashed')
     plt.plot(theta, Tr_net, '-ro', label='distorted land')
     plt.plot(theta, Trc_net, label='efficient land')
     plt.plot(theta, Lr_net, '-b*', label='distorted labor')
@@ -368,7 +361,7 @@ def factor_plot(ECO, Xrc, Xr):
               .format(ECO.GAMMA))
     plt.xlabel(r'$\theta$ -- Landlord land ownership share')
     plt.legend(loc='lower left',title='net hiring in of')
-    plt.show()
+    #plt.show()
     return
 
 def TLratio_plot(ECO, Xrc, Xr):
